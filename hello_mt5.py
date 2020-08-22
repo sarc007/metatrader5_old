@@ -1,12 +1,13 @@
-from datetime import datetime
+import numpy as np
+
 import matplotlib.pyplot as plt
 import pandas as pd
-from _datetime import datetime,timedelta
+from _datetime import datetime,timedelta, date
 from pandas.plotting import register_matplotlib_converters
 
 register_matplotlib_converters()
 import MetaTrader5 as mt5
-now = datetime.now() - timedelta(days=3)
+now = datetime.now() - timedelta(days=11)
 # connect to MetaTrader 5
 if not mt5.initialize():
     print("initialize() failed")
@@ -82,7 +83,40 @@ for val in eurcad_rates[:10]: print(val)
 
 # PLOT
 # create DataFrame out of the obtained data
+rates_frame = pd.DataFrame(eurcad_rates)
+print(rates_frame.columns.values)
+
 ticks_frame = pd.DataFrame(audusd_ticks)
+# print(ticks_frame.columns.values)
+timestamp = datetime.fromtimestamp(1500000000)
+# datestamp = date.fromtimestamp()
+ticks_frame['year_month'] = str(pd.to_datetime(ticks_frame['time'], unit='s').dt.to_period('M')[0])
+# ticks_frame['year_month'] = str(ticks_frame.temp_year_month[0])
+# print(ticks_frame.year_month.values[0])
+# ticks_frame['year_month'] =
+# print(timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+# print(ticks_frame.head())
+print(ticks_frame.columns.values)
+# curr_frame = []
+# for tf in ticks_frame.iterrows():
+#     # curr_frame.append((tf.time, tf.bid, tf.ask, tf.last, tf.volume, tf.flags, tf.volume_real, tf.year_month.Period))
+#     curr_frame.append((tf[1][0], tf[1][1], tf[1][2], tf[1][3], tf[1][4], tf[1][5], tf[1][6], tf[1][7], str(tf[1][8])))
+#     if len(curr_frame) > 3:
+#         break
+# print("currency frame")
+# print(curr_frame)
+# print(ticks_frame[0:5].year_month)
+records = ticks_frame[0:3].to_records(index=False)
+# records = curr_frame[0:3]
+# print(records)
+result = list(records)
+# for res in result:
+#     print(res[8])
+    # r = res[8].str.lstrip('Period(')
+    # print(r)
+# result = ticks_frame.year_month[0:3]
+print(result)
+# print(ticks_frame[:10].to_list)
 # convert time in seconds into the datetime format
 ticks_frame['time'] = pd.to_datetime(ticks_frame['time'], unit='s')
 # display ticks on the chart
