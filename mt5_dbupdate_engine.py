@@ -1,4 +1,5 @@
 import csv
+import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,10 +11,21 @@ from postgres_ddl import create_part_tbl_spc as cpts
 from utils import remove_dash_add_underscore as rdaus
 from psycopg2.extensions import register_adapter, AsIs
 import numpy
+
+# connection = args[0]
+# cursor = connection.cursor()
+drive = "f:\\"
+
+
+
 def addapt_numpy_float64(numpy_float64):
     return AsIs(numpy_float64)
+
+
 def addapt_numpy_int64(numpy_int64):
     return AsIs(numpy_int64)
+
+
 register_adapter(numpy.float64, addapt_numpy_float64)
 register_adapter(numpy.int64, addapt_numpy_int64)
 register_matplotlib_converters()
@@ -48,35 +60,70 @@ Currency_List = ["EURUSD", "GBPUSD"]
 # ,"AUDUSD","USDJPY","USDCHF", "USDCAD"]
 
 def bulkInsert(records, currency, cnn):
-    sql_insert_query = """ INSERT INTO """ + currency + """ (time_fld, bid_fld, ask_fld, last_fld, volume_fld, time_msc_fld, flags_fld, volume_real_fld, year_month_fld) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) """
+    for record in records:
+        print(record)
+        print("time mili second field",record[5])
+        postgreSQL_select_Query = ''' SELECT Count(*) count_value FROM ''' + currency + ''' WHERE table_name =  ''' \
+                                  + str(record[5]) + ''';'''
+
+        print(postgreSQL_select_Query)
+        cursor1.execute(postgreSQL_select_Query)
+        # print("Selecting rows from mobile table using cursor.fetchall")
+        count_record = cursor1.fetchone()
+
+        print("Record Count Value To Be Inserted:", count_record[0])
+
+        if (count_record[0] == 0):
+            sql_insert_query = """ INSERT INTO """ + currency + """ (time_fld, bid_fld, ask_fld, last_fld, volume_fld, time_msc_fld, flags_fld, volume_real_fld, year_month_fld) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) """
 
     # executemany() to insert multiple rows rows
     # result = cursor.execute(sql_insert_query, record)
-    result = cursor1.executemany(sql_insert_query, records)
-    connection.commit()
-    print(cursor1.rowcount, "Record inserted successfully into mobile table")
+            try:
+                result = cursor1.executemany(sql_insert_query, records)
+                connection.commit()
+            except (Exception, psycopg2.Error) as error:
+                print(records)
+                print("Failed inserting record into currency table {}".format(error))
+                connection.rollback()
+
+            print(cursor1.rowcount, "Record inserted successfully into  table")
 
 
 def loop_in_currency(conn):
+    # prev_year  =
     for currency in Currency_List:
+
+        if now.weekday() == 5 or now.weekday() == 6:
+            return
         if now.weekday() == 0 and now.day == 1 and now.month > 1:
-            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year, now.month - 1, now.day - 3, now.hour),
+            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year,  (now + timedelta(days=-3)).month,
+                                                                     (now + timedelta(days=-3)).day, now.hour),
                                                   datetime(now.year, now.month, now.day, now.hour, now.minute,
                                                            now.second), mt5.COPY_TICKS_ALL)
         elif now.weekday() > 0 and now.day == 1 and now.month > 1:
-            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year, now.month - 1, now.day - 1, now.hour),
+            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year, (now + timedelta(days=-1)).month,
+                                                                     (now + timedelta(days=-1)).day, now.hour),
                                                   datetime(now.year, now.month, now.day, now.hour), mt5.COPY_TICKS_ALL)
         elif now.weekday() == 0 and now.day == 1 and now.month == 1:
             currency_ticks = mt5.copy_ticks_range(currency,
-                                                  datetime(now.year - 1, december_month, now.day - 3, now.hour),
+                                                  datetime((now + timedelta(days=-3)).year,
+                                                           (now + timedelta(days=-3)).month,
+                                                           (now + timedelta(days=-3)).day,
+                                                           now.hour),
                                                   datetime(now.year, now.month, now.day, now.hour), mt5.COPY_TICKS_ALL)
         elif now.weekday() > 0 and now.day == 1 and now.month == 1:
             currency_ticks = mt5.copy_ticks_range(currency,
-                                                  datetime(now.year - 1, december_month, now.day - 1, now.hour),
+                                                  datetime((now + timedelta(days=-1)).year,
+                                                           (now + timedelta(days=-1)).month,
+                                                           (now + timedelta(days=-1)).day, now.hour),
                                                   datetime(now.year, now.month, now.day, now.hour), mt5.COPY_TICKS_ALL)
         else:
-            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year, now.month, now.day - 1, now.hour),
+            currency_ticks = mt5.copy_ticks_range(currency, datetime(now.year, now.month,
+                                                                     (now + timedelta(days=-1)).day, now.hour),
                                                   datetime(now.year, now.month, now.day, now.hour), mt5.COPY_TICKS_ALL)
+        print(currency_ticks)
+        if len(currency_ticks) == 0:
+            return
 
         ticks_frame = pd.DataFrame(currency_ticks)
         ticks_frame['time'] = ticks_frame['time'].values.astype('int64')
@@ -93,10 +140,11 @@ def loop_in_currency(conn):
         distinct_date_part_frames = ticks_frame.drop_duplicates(subset=['year_month'])['year_month']
         # print(distinct_date_part_frames.columns.values)
         print(distinct_date_part_frames.values.astype(str))
-        for date_part in distinct_date_part_frames.values.astype(str):
-            cpts(connection, 'f:\\', currency, rdaus(date_part), 'forex')
-        records = ticks_frame.to_records(index=False)
 
+
+        for date_part in distinct_date_part_frames.values.astype(str):
+            cpts(connection, drive, currency, rdaus(date_part), 'forex')
+        records = ticks_frame.to_records(index=False)
         tuple(map(tuple, records))
         # result = list(records)
         # print(result)
@@ -109,7 +157,7 @@ def loop_in_currency(conn):
         #     # records_to_insert =
 
         bulkInsert(records=records, currency=currency.lower() + "_tbl", cnn=connection)
-            
+
 
 connection = psycopg2.connect(user="forex",
                               password="Matrix@2020",
@@ -117,11 +165,26 @@ connection = psycopg2.connect(user="forex",
                               port="5432",
                               database="MQLDB")
 try:
+    counter = 0
+    while True:
+        now_dated = datetime(2010, 1, 1, 0, 0, 0, 0)
+        now = now_dated + timedelta(days=(counter))  # The magic number 3700 is nothing but 10 years back dated
+        print(now.day-1)
+        curr_now = datetime.now()
+        if now.year == curr_now.year  and now.month == curr_now.month  and now.day == curr_now.day \
+            and now.hour == curr_now.hour  and now.minute == curr_now.minute:
+            print('Data Upto Date In The DataBase')
+            break
 
-    cursor1 = connection.cursor()
-    connection.autocommit = True
+        print('Year, Month, Day, Hour, Minute, WeekDay ', now.year, now.month, now.day, now.hour, now.minute,
+              now.weekday())
+        cursor1 = connection.cursor()
+        connection.autocommit = True
+        loop_in_currency(conn=connection)
 
-    loop_in_currency(conn=connection)
+        # time.sleep(10)
+        counter = counter + 1
+        print("Counter :", counter, "Now : ", now)
 except (Exception, psycopg2.Error) as error:
     print("Failed inserting record into currency table {}".format(error))
 
@@ -134,8 +197,5 @@ finally:
     if connection:
         connection.close()
         print("PostgreSQL connection is closed")
-
-
-
 
 mt5.shutdown()
