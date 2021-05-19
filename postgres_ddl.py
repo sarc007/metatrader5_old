@@ -60,43 +60,43 @@ def create_part_tbl_spc(*args):
 
         postgreSQL_select_Query = ''' SELECT Count(*) count_value FROM information_schema.tables WHERE table_name =  ''' + prtn_tbl_name_str + ''';'''
 
-        print(postgreSQL_select_Query)
+        # print(postgreSQL_select_Query)
         cursor.execute(postgreSQL_select_Query)
         # print("Selecting rows from mobile table using cursor.fetchall")
         count_record = cursor.fetchone()
 
-        print("Print each row and it's columns values")
-        print("Count Record :", count_record[0])
-        print(location_tbl_spc)
+        # print("Print each row and it's columns values")
+        # print("Count Record :", count_record[0])
+        # print(location_tbl_spc)
         if (count_record[0] == 0):
             # Check for table Space
             postgreSQL_select_Query = ''' SELECT Count(*) count_value FROM pg_tablespace WHERE spcname = ''' + tbl_spc_str + ''';'''
-            print(postgreSQL_select_Query)
+            # print(postgreSQL_select_Query)
             cursor.execute(postgreSQL_select_Query)
             # print("Selecting rows from mobile table using cursor.fetchall")
             count_record = cursor.fetchone()
 
-            print("Print each row and it's columns values")
-            print("Count Record :", count_record[0])
-            print(location_tbl_spc)
+            # print("Print each row and it's columns values")
+            # print("Count Record :", count_record[0])
+            # print(location_tbl_spc)
             if (count_record[0] == 0):
                 # Create table space
                 create_tbl_spc_query = ''' CREATE TABLESPACE  ''' + tbl_spc + '''
                 OWNER  ''' + forex_owner + '''
                 LOCATION ''' + location_tbl_spc_str + ''';'''
-                print(create_tbl_spc_query)
+                # print(create_tbl_spc_query)
                 cursor.execute(create_tbl_spc_query)
                 connection.commit()
-                print("Table created successfully in PostgreSQL ")
+                # print("Table created successfully in PostgreSQL ")
                 # Create Partition Table
                 create_prtn_tbl_query = ''' CREATE TABLE  ''' + prtn_tbl_name + '''
                  partition of   ''' + tbl_name + ''' for values in ('''+ruad(date_part_str)+''')
                  tablespace ''' + tbl_spc + ''';'''
-                print(create_prtn_tbl_query)
+                # print(create_prtn_tbl_query)
                 cursor.execute(create_prtn_tbl_query)
                 connection.commit()
 
-                print("Table created successfully in PostgreSQL ")
+                # print("Table created successfully in PostgreSQL ")
                 ret_val = True
             else:
                 ret_val = True
